@@ -10,9 +10,8 @@ import {
 } from '@tanstack/react-table';
 import './Dashboard.css';
 import { jsPDF } from 'jspdf';
-import autoTable from "jspdf-autotable";
+import autoTable from 'jspdf-autotable';
 import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
-
 
 declare module "jspdf" {
   interface jsPDF {
@@ -22,17 +21,20 @@ declare module "jspdf" {
   }
 }
 
-
 // Define the Invoice interface
 interface Invoice {
   Id?: number;
   nfattura: string;
   dataf: string;
-   venditore: string; indirizzoV: string; pivaV: string ;
-  cliente: string; indirizzoC: string; pivaC: string ;
-   descrizione: string;
-    quantità: number; 
-    prezzo: number ;
+  venditore: string; 
+  indirizzoV: string; 
+  pivaV: string;
+  cliente: string; 
+  indirizzoC: string; 
+  pivaC: string;
+  descrizione: string;
+  quantità: number; 
+  prezzo: number;
   iva: number;
   note?: string;
   state: "paid" | "unpaid";
@@ -43,11 +45,15 @@ interface RawInvoice {
   Id?: number;
   nfattura: string;
   dataf: string;
-   venditore: string; indirizzoV: string; pivaV: string ;
-  cliente: string; indirizzoC: string; pivaC: string ;
-   descrizione: string;
-    quantità: number; 
-    prezzo: number ;
+  venditore: string; 
+  indirizzoV: string; 
+  pivaV: string;
+  cliente: string; 
+  indirizzoC: string; 
+  pivaC: string;
+  descrizione: string;
+  quantità: number; 
+  prezzo: number;
   iva: number;
   note?: string;
   state: "paid" | "unpaid";
@@ -60,7 +66,7 @@ const Dashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [formData, setFormData] = useState<Partial<Invoice>>({});
- 
+  const [globalFilter, setGlobalFilter] = useState('');
 
   const fetchInvoices = async () => {
     try {
@@ -81,12 +87,11 @@ const Dashboard: React.FC = () => {
           prezzo: item.prezzo,
           state: item.state,
           dataf: item.dataf,
-          venditore:item.venditore,
-          indirizzoV:item.indirizzoV,
-          quantità:item.quantità,
-          pivaV:item.pivaV,
-          iva:item.iva
-
+          venditore: item.venditore,
+          indirizzoV: item.indirizzoV,
+          quantità: item.quantità,
+          pivaV: item.pivaV,
+          iva: item.iva
         }));
         setInvoice(transformedData);
         setLoading(false);
@@ -133,70 +138,123 @@ const Dashboard: React.FC = () => {
   const handleDownload = (invoice: Invoice) => {
     // Crea un nuovo documento PDF
     const doc = new jsPDF();
-  
+    
+    // Calcoli
+    const imponibile = invoice.quantità * invoice.prezzo;
+    const importoIva = imponibile * (invoice.iva / 100);
+    const totale = imponibile + importoIva;
+    
     // Imposta font
     doc.setFont("Helvetica");
-    doc.setFontSize(12);
-  
+    
     // Intestazione
-    doc.setFontSize(16);
-    doc.text("FATTURA", 10, 20);
+    doc.setFontSize(18);
+    doc.setFont("Helvetica", "bold");
+    doc.text("FATTURA", 14, 20);
+    doc.setFontSize(10);
+    doc.setFont("Helvetica", "normal");
+    doc.text(`Numero: ${invoice.nfattura}`, 14, 30);
+    doc.text(`Data: ${invoice.dataf}`, 14, 35);
+    
+    // Stato fattura (con colore)
+    const statoText = invoice.state === 'paid' ? 'PAGATA' : 'NON PAGATA';
+    doc.setFillColor(invoice.state === 'paid' ? 230 : 255, invoice.state === 'paid' ? 250 : 230, invoice.state === 'paid' ? 230 : 230);
+    doc.setTextColor(invoice.state === 'paid' ? 0 : 200, invoice.state === 'paid' ? 150 : 0, 0);
+    doc.roundedRect(150, 15, 45, 10, 5, 5, 'F');
+    doc.text(statoText, 152, 22);
+    doc.setTextColor(0, 0, 0); // Ripristina il colore del testo
+    
+    // Dati venditore e cliente
+    const venditoreY = 50;
     doc.setFontSize(12);
-    doc.text(`Numero: ${invoice.nfattura}`, 10, 30);
-    doc.text(`Data: ${invoice.dataf}`, 10, 40);
-    doc.text(`Stato: ${invoice.state}`, 10, 50);
-  
-    // Dati venditore
-    doc.text("Venditore:", 10, 70);
-    doc.text(invoice.venditore, 10, 80);
-    doc.text(invoice.indirizzoV, 10, 90);
-    doc.text(`P.IVA: ${invoice.pivaV}`, 10, 100);
-  
-    // Dati cliente
-    doc.text("Cliente:", 100, 70);
-    doc.text(invoice.cliente, 100, 80);
-    doc.text(invoice.indirizzoC, 100, 90);
-    doc.text(`P.IVA: ${invoice.pivaC}`, 100, 100);
-  
-    // Tabella articoli (con autotable)
-    const tableStartY = 120;
-    const subtotal = invoice.prezzo * invoice.quantità;
-    const ivaAmount = subtotal * (invoice.iva / 100);
-    const total = subtotal + ivaAmount;
-  
+    doc.setFont("Helvetica", "bold");
+    doc.text("Venditore", 14, venditoreY);
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(invoice.venditore, 14, venditoreY + 8);
+    doc.setFont("Helvetica", "normal");
+    doc.text(invoice.indirizzoV, 14, venditoreY + 14);
+    doc.text(`P.IVA: ${invoice.pivaV}`, 14, venditoreY + 20);
+    
+    doc.setFontSize(12);
+    doc.setFont("Helvetica", "bold");
+    doc.text("Cliente", 110, venditoreY);
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(invoice.cliente, 110, venditoreY + 8);
+    doc.setFont("Helvetica", "normal");
+    doc.text(invoice.indirizzoC, 110, venditoreY + 14);
+    doc.text(`P.IVA: ${invoice.pivaC}`, 110, venditoreY + 20);
+    
+    // Tabella articoli
+    const tableStartY = 85;
     autoTable(doc, {
       startY: tableStartY,
-      head: [["Descrizione", "Quantità", "Prezzo Unitario", "IVA", "Totale"]],
+      head: [["Descrizione", "Quantità", "Prezzo Unitario", "Imponibile"]],
       body: [[
         invoice.descrizione,
-        invoice.quantità,
+        invoice.quantità.toString(),
         `€ ${invoice.prezzo.toFixed(2)}`,
-        `${invoice.iva}%`,
-        `€ ${subtotal.toFixed(2)}`
+        `€ ${imponibile.toFixed(2)}`
       ]],
       theme: "grid",
-      styles: { fontSize: 10 },
-      columnStyles: {
-        0: { cellWidth: 80 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 20 },
-        4: { cellWidth: 30 }
+      headStyles: { 
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold'
+      },
+      styles: { 
+        fontSize: 10,
+        cellPadding: 5
       }
     });
-  
-    // Totale
-    const finalY = doc .lastAutoTable.finalY || tableStartY; // Tipizzazione per autotable
-    doc.setFontSize(12);
-    doc.text(`Subtotale: € ${subtotal.toFixed(2)}`, 150, finalY + 10);
-    doc.text(`IVA (${invoice.iva}%): € ${ivaAmount.toFixed(2)}`, 150, finalY + 20);
-    doc.text(`Totale: € ${total.toFixed(2)}`, 150, finalY + 30);
-  
+    
+    // Riepilogo totali
+    const finalY = (doc).lastAutoTable.finalY + 10;
+    
+    // Stile per i totali
+    doc.setFontSize(10);
+    doc.setFont("Helvetica", "normal");
+    
+    // Tabella riepilogo
+    const totalsWidth = 70;
+    const totalsX = doc.internal.pageSize.width - totalsWidth - 14;
+    
+    doc.text("Imponibile:", totalsX, finalY);
+    doc.text(`€ ${imponibile.toFixed(2)}`, totalsX + totalsWidth - 20, finalY, { align: "right" });
+    
+    doc.line(totalsX, finalY + 3, totalsX + totalsWidth, finalY + 3);
+    
+    doc.text(`IVA (${invoice.iva}%):`, totalsX, finalY + 10);
+    doc.text(`€ ${importoIva.toFixed(2)}`, totalsX + totalsWidth - 20, finalY + 10, { align: "right" });
+    
+    doc.line(totalsX, finalY + 13, totalsX + totalsWidth, finalY + 13);
+    
+    doc.setFont("Helvetica", "bold");
+    doc.text("Totale:", totalsX, finalY + 20);
+    doc.text(`€ ${totale.toFixed(2)}`, totalsX + totalsWidth - 20, finalY + 20, { align: "right" });
+    
+    // Note (se presenti)
+    if (invoice.note) {
+      const noteY = finalY + 35;
+      doc.setFillColor(245, 245, 245);
+      doc.rect(14, noteY - 5, doc.internal.pageSize.width - 28, 20, 'F');
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("Note", 18, noteY + 2);
+      doc.setFont("Helvetica", "normal");
+      doc.text(invoice.note, 18, noteY + 10);
+    }
+    
+    // Footer
+    const footerY = doc.internal.pageSize.height - 20;
+    doc.setFontSize(9);
+    doc.setTextColor(130, 130, 130);
+    doc.text("Grazie per la fiducia accordataci.", doc.internal.pageSize.width / 2, footerY, { align: "center" });
+    
     // Salva il PDF
     doc.save(`Fattura-${invoice.nfattura}.pdf`);
   };
-  
-  
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -236,84 +294,91 @@ const Dashboard: React.FC = () => {
   const columns: ColumnDef<Invoice>[] = [
     {
       accessorKey: 'Update',
-      header: 'Update',
+      header: 'UPDATE',
       cell: ({ row }) => (
         <button
-          className="action-btn update"
+          className="edit-btn"
           onClick={() => handleUpdate(row.original)}
         >
-          Update
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H18C18.5523 20 19 19.5523 19 19V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89783 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
       ),
       enableSorting: false,
     },
     {
       accessorKey: 'nfattura',
-      header: 'nFattura',
+      header: 'NFATURA',
       enableSorting: true,
     },
     {
       accessorKey: 'cliente',
-      header: 'Cliente',
+      header: 'CLIENTE',
       enableSorting: true,
       enableGlobalFilter: true,
     },
     {
       accessorKey: 'descrizione',
-      header: 'Descrizione',
+      header: 'DESCRIZIONE',
       enableSorting: true,
       enableGlobalFilter: true,
     },
     {
       accessorKey: 'prezzo',
-      header: 'Prezzo',
+      header: 'PREZZO',
+      cell: ({ row }) => {
+        return `€${row.original.prezzo}`;
+      },
       enableSorting: true,
     },
     {
       accessorKey: 'state',
-      header: 'Stato',
+      header: 'STATO',
+      cell: ({ row }) => {
+        return (
+          <div className={`status-badge ${row.original.state}`}>
+            {row.original.state === 'paid' ? 'paid' : 'unpaid'}
+          </div>
+        );
+      },
       enableSorting: true,
     },
     {
       accessorKey: 'Delete',
-      header: 'Delete',
+      header: 'DELETE',
       cell: ({ row }) => (
         <button
-          className="action-btn delete"
+          className="delete-btn"
           onClick={() => handleDelete(row.original.Id!)}
         >
-          Delete
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
       ),
       enableSorting: false,
     },
     {
       accessorKey: 'Download',
-      header: 'Download',
+      header: 'DOWNLOAD',
       cell: ({ row }) => (
-       <>
- {/* {selectedInvoice && (
-        <InvoicePreview
-          invoice={selectedInvoice}
-          invoiceContentRef={invoiceContentRef} // Passa il ref come prop
-        />
-      )} */}
         <button
-          className="action-btn download"
+          className="download-btn"
           onClick={() => handleDownload(row.original)}
         >
-          Download
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7 10L12 15L17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
-     
-        
-    </>
       ),
-      
       enableSorting: false,
     },
-     
   ];
-
 
   // Initialize React-Table
   const table = useReactTable({
@@ -323,11 +388,14 @@ const Dashboard: React.FC = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    initialState: {
+    state: {
       pagination: {
-        pageSize: 3,
+        pageSize: 10,
+        pageIndex: 0
       },
+      globalFilter,
     },
+    onGlobalFilterChange: setGlobalFilter,
   });
 
   if (loading) {
@@ -338,131 +406,139 @@ const Dashboard: React.FC = () => {
     return <p className="status-message error">{error}</p>;
   }
 
-  console.log('invoice data:', JSON.stringify(invoice, null, 2));
   const paidCount = invoice.filter(inv => inv.state === 'paid').length;
   const unpaidCount = invoice.filter(inv => inv.state === 'unpaid').length;
-  const data=[
-    {name:"paid", value: paidCount},
-    {name:"unpaid", value:unpaidCount}
-  ]
+  const paidPercentage = invoice.length > 0 ? Math.round((paidCount / invoice.length) * 100) : 0;
+  const unpaidPercentage = invoice.length > 0 ? Math.round((unpaidCount / invoice.length) * 100) : 0;
+
+  const data = [
+    { name: "paid", value: paidCount },
+    { name: "unpaid", value: unpaidCount }
+  ];
   
-  const COLORS = ['#4CAF50', '#F44336'];
+  const COLORS = ['#9367FD', '#F44336'];
+
   return (
     <div className="dashboard-container">
-
-      <div className='analitiche'>
-       
-        <div className='paid'>
-        <PieChart width={1130} height={400}>
-  <Pie
-    data={data}
-    cx="50%"
-    cy="50%" 
-    label
-    outerRadius={140}
-    dataKey="value"
-  >
-    {data.map((entry, index) => (
-      <Cell key={`slice-${index}`} fill={COLORS[index % COLORS.length]} />
-    ))}
-  </Pie>
-  <Tooltip />
-  <Legend verticalAlign="bottom" height={34} />
-</PieChart>
-
-
+      <div className="stat-card">
+        <h2>Stato Fatture</h2>
+        <div className="chart-container">
+          <PieChart width={250} height={250}>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={3}
+              dataKey="value"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Legend 
+              layout="horizontal" 
+              verticalAlign="bottom" 
+              align="center"
+              formatter={(value) => (value === "paid" ? "Pagate" : "Non Pagate")}
+            />
+            <Tooltip 
+              formatter={(value, name) => {
+                return [`${value} fatture`, name === "paid" ? "Pagate" : "Non Pagate"];
+              }}
+            />
+          </PieChart>
+          <div className="stats-text">
+            <div className="stat-item">
+              <span className="stat-color" style={{ backgroundColor: COLORS[0] }}></span>
+              <span className="stat-label">Pagate: {paidPercentage}%</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-color" style={{ backgroundColor: COLORS[1] }}></span>
+              <span className="stat-label">Non Pagate: {unpaidPercentage}%</span>
+            </div>
+          </div>
         </div>
-       
       </div>
-      {/* Global filter input */}
-      
-      <input
-        type="text"
-        placeholder="Search invoices..."
-        value={(table.getState().globalFilter ?? '') as string}
-        onChange={(e) => table.setGlobalFilter(e.target.value)}
-        className="search-input"
-      />
 
-       {/* Pagination Controls */}
-       <div className="pagination">
-        <button
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-          className="pagination-btn"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-          className="pagination-btn"
-        >
-          Next
-        </button>
-        <span className="pagination-info">
-          Page{' '}
-          <strong>
-            {table.getState().pagination.pageIndex + 1} of{' '}
-            {table.getPageCount()}
-          </strong>
-        </span>
-        <select
-          value={table.getState().pagination.pageSize}
-          onChange={(e) => table.setPageSize(Number(e.target.value))}
-          className="pagination-select"
-        >
-          {[10, 20, 30, 40, 50].map((pageSize) => (
-            <option key={pageSize} value={pageSize}>
-              Show {pageSize}
-            </option>
-          ))}
-        </select>
+      <div className="table-container">
+        <div className="table-header">
+          <div className="search-container">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="search-icon">
+              <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search invoices..."
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="search-input"
+            />
+          </div>
+          <div className="pagination">
+            <span className="pagination-info">
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+            </span>
+            <div className="pagination-controls">
+              <button
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="pagination-btn"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="pagination-btn"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <table className="table-section">
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className={header.column.getCanSort() ? 'sortable' : ''}
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                    {header.column.getIsSorted() ? (
+                      header.column.getIsSorted() === 'asc' ? (
+                        <span className="sort-icon">↑</span>
+                      ) : (
+                        <span className="sort-icon">↓</span>
+                      )
+                    ) : null}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id} className="invoice-row">
+                {row.getVisibleCells().map((cell) => (
+                  <td  key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      
-
-      {/* Table */}
-      <table className="invoice-table">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  onClick={header.column.getToggleSortingHandler()}
-                  className={header.column.getCanSort() ? 'sortable' : ''}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                  {header.column.getIsSorted() ? (
-                    header.column.getIsSorted() === 'asc' ? (
-                      <span className="sort-icon">↑</span>
-                    ) : (
-                      <span className="sort-icon">↓</span>
-                    )
-                  ) : null}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="invoice-row">
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-   
-     
 
       {/* Update Modal */}
       {isModalOpen && (
@@ -470,93 +546,93 @@ const Dashboard: React.FC = () => {
           <div className="modal">
             <h2 className="form-title">Update Invoice</h2>
             <form onSubmit={handleUpdateSubmit} className="modal-form">
-            <div className="form-row">
-            <div className="form-column">
-              <label>
-                nFattura:
-                <input
-                  type="text"
-                  name="nfattura"
-                  value={formData.nfattura || ''}
-                  onChange={handleFormChange}
-                  required
-                />
-              </label>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label htmlFor="nfattura">Numero Fattura</label>
+                  <input
+                    id="nfattura"
+                    type="text"
+                    name="nfattura"
+                    value={formData.nfattura || ''}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="cliente">Cliente</label>
+                  <input
+                    id="cliente"
+                    type="text"
+                    name="cliente"
+                    value={formData.cliente || ''}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="indirizzoC">Indirizzo Cliente</label>
+                  <input
+                    id="indirizzoC"
+                    type="text"
+                    name="indirizzoC"
+                    value={formData.indirizzoC || ''}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="pivaC">Partita IVA Cliente</label>
+                  <input
+                    id="pivaC"
+                    type="text"
+                    name="pivaC"
+                    value={formData.pivaC || ''}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="descrizione">Descrizione</label>
+                  <input
+                    id="descrizione"
+                    type="text"
+                    name="descrizione"
+                    value={formData.descrizione || ''}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="prezzo">Prezzo</label>
+                  <input
+                    id="prezzo"
+                    type="number"
+                    name="prezzo"
+                    value={formData.prezzo || 0}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="state">Stato</label>
+                  <select
+                    id="state"
+                    name="state"
+                    value={formData.state || 'unpaid'}
+                    onChange={handleFormChange}
+                  >
+                    <option value="paid">Paid</option>
+                    <option value="unpaid">Unpaid</option>
+                  </select>
+                </div>
               </div>
-              <div className="form-column"></div>
-              <label>
-                Cliente:
-                <input
-                  type="text"
-                  name="cliente"
-                  value={formData.cliente || ''}
-                  onChange={handleFormChange}
-                  required
-                />
-                </label>
-              </div>
-              <div className="form-column">
-              <label>
-                Indirizzo Cliente:
-                <input
-                  type="text"
-                  name="indirizzoC"
-                  value={formData.indirizzoC || ''}
-                  onChange={handleFormChange}
-                  required
-                />
-              </label>
-              </div>
-              <div className="form-column">
-              <label>
-                Partita IVA:
-                <input
-                  type="text"
-                  name="pivaC"
-                  value={formData.pivaC || ''}
-                  onChange={handleFormChange}
-                  required
-                />
-              </label>
-              </div>
-              <div className="form-column">
-              <label>
-                Descrizione:
-                <input
-                  type="text"
-                  name="descrizione"
-                  value={formData.descrizione || ''}
-                  onChange={handleFormChange}
-                  required
-                />
-              </label>
-              </div>
-              <div className="form-column">
-              <label>
-                Prezzo:
-                <input
-                  type="number"
-                  name="prezzo"
-                  value={formData.prezzo || 0}
-                  onChange={handleFormChange}
-                  required
-                />
-              </label>
-              </div>
-              <div className="form-column">
-              <label>
-                Stato:
-                <select
-                  name="state"
-                  value={formData.state || 'unpaid'}
-                  onChange={handleFormChange}
-                >
-                  <option value="paid">Paid</option>
-                  <option value="unpaid">Unpaid</option>
-                </select>
-              </label>
-              </div>
-              <div className="form-column">
+
               <div className="modal-actions">
                 <button type="submit" className="modal-btn save">
                   Save
@@ -569,13 +645,9 @@ const Dashboard: React.FC = () => {
                   Cancel
                 </button>
               </div>
-              </div>
             </form>
           </div>
- 
-
         </div>
-        
       )}
     </div>
   );
