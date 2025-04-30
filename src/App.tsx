@@ -14,9 +14,10 @@ function AppWrapper() {
   const location = useLocation();
   console.log("Current path:", location.pathname);
   // Rotte in cui nascondere la sidebar
-  const hideSidebarRoutes = ['/Login', '/Register','/ForgetPwd'];
+  const hideSidebarRoutes = ['/login', '/register', '/forgetpwd'];
+const shouldHideSidebar = hideSidebarRoutes.includes(location.pathname.toLowerCase());
 
-  const shouldHideSidebar = hideSidebarRoutes.includes(location.pathname);
+
 
   return (
     <div className="flex min-h-screen">

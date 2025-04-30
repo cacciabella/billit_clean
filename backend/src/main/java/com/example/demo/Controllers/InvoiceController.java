@@ -1,8 +1,10 @@
 package com.example.demo.Controllers;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,10 +12,16 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.Model.invoices;
 import com.example.demo.repository.RepositoryInvoices;
 
+import jakarta.servlet.http.HttpServletRequest;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,22 +41,105 @@ public class InvoiceController {
         this.repositoryInvoices = repositoryInvoices;
     }
 
+    
 @GetMapping("/InvoiceList")
-public Iterable<invoices> getAllInvoices() {
-    return this.repositoryInvoices.findAll();
+public ResponseEntity<?> getInvoicesByUser(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    try {
+        // Check if Firebase is initialized before trying to use it
+        if (!isFirebaseInitialized()) {
+            // Log the error for debugging
+            System.err.println("Firebase non è inizializzato. Impossibile verificare il token.");
+            
+            // Option 1: Return an appropriate error message
+            return ResponseEntity
+                    .status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("Servizio Firebase non disponibile. Riprova più tardi.");
+            
+            // Option 2 (for development only): Skip token verification and return all invoices
+            // Comment Option 1 and uncomment this section for development testing
+            /*
+            System.out.println("SVILUPPO: Accesso senza autenticazione concesso");
+            List<invoices> allInvoices = repositoryInvoices.findAll();
+            return ResponseEntity.ok(allInvoices);
+            */
+        }
+
+        // Controlla se l'Authorization header è presente
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token di autorizzazione mancante o non valido");
+        }
+
+        // Estrai il token Firebase dalla richiesta
+        String token = authorizationHeader.substring(7); // Rimuove "Bearer "
+        FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
+        String userIdFromToken = decodedToken.getUid(); // Estrai l'UID dell'utente
+
+        // Recupera le fatture per l'utente specifico
+        List<invoices> userInvoices = repositoryInvoices.findByUserId(userIdFromToken);
+
+        if (userInvoices.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(userInvoices); // Se non ci sono fatture per l'utente
+        }
+
+        return ResponseEntity.ok(userInvoices); // Restituisce le fatture per l'utente
+
+    } catch (FirebaseAuthException e) {
+        // Gestione specifica per errori di autenticazione Firebase
+        System.err.println("Errore di autenticazione Firebase: " + e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body("Token non valido: " + e.getMessage());
+    } catch (Exception e) {
+        // Log dettagliato dell'errore
+        System.err.println("Errore nel recupero delle fatture: " + e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Errore del server: " + e.getMessage());
+    }
 }
 
-
+// Helper method to check if Firebase is initialized
+private boolean isFirebaseInitialized() {
+    try {
+        // If this doesn't throw an exception, Firebase is initialized
+        FirebaseApp defaultApp = FirebaseApp.getInstance();
+        return defaultApp != null;
+    } catch (IllegalStateException e) {
+        // FirebaseApp.getInstance() throws IllegalStateException if no app has been initialized
+        return false;
+    }
+}
     @PostMapping("/NewInvoices")
-    public invoices postMethodName(@RequestBody invoices invoices) {
+    public ResponseEntity<invoices> postMethodName(@RequestBody invoices invoice, HttpServletRequest request) {
+        try {
+            // Verifica il token nell'header della richiesta
+            String authorizationHeader = request.getHeader("Authorization");
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+            }
 
-        if (invoices.getVenditore() == null) {
-            invoices.setVenditore("Default Vendor"); 
-        }
-        
-        invoices newInvoices=this.repositoryInvoices.save(invoices);
+            String token = authorizationHeader.substring(7); // Estrae il token
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
+            String userIdFromToken = decodedToken.getUid();
 
-        return newInvoices;
+            // Aggiungi l'ID utente al modello della fattura
+            invoice.setUserId(userIdFromToken); // Imposta l'ID utente sulla fattura
+
+            // Se il venditore non è specificato, metti un valore di default
+            if (invoice.getVenditore() == null) {
+                invoice.setVenditore("Default Vendor");
+            }
+
+            // Salva la fattura nel database
+            invoices savedInvoice = repositoryInvoices.save(invoice);
+
+            return ResponseEntity.ok(savedInvoice);
+
+        } catch (Exception e) {
+          e.printStackTrace(); // Log dell'errore
+          return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+      }
       
     }
 

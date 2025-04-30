@@ -321,3 +321,23 @@ td {
 .modal-btn.cancel:hover {
   background-color: #d1d5db;
 }
+
+.no-data-cell {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.no-data-message {
+  text-align: center;
+  margin-top: 15px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Stile per i bottoni disabilitati */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

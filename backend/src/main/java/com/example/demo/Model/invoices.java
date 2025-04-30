@@ -29,6 +29,23 @@ public class invoices {
     }
 
 
+   
+
+    @Column(name = "userId")
+    private String userId;
+
+    public String getUserId() {
+        return userId;
+    }
+
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+
+
+
     @Column(name = "nfattura")
     private String nfattura;
 

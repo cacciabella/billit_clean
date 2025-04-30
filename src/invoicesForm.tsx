@@ -2,11 +2,13 @@
 
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { auth } from '../firebase/firebaseConfig';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Invoice } from "./invoices";
 import { IoAddOutline } from "react-icons/io5";
 import { useState } from "react";
 import './invoiceForm.css';
+import { Link } from "react-router-dom";
 
 const schema = z.object({
   nfattura: z.string().min(1, "Invoice number is required"),
@@ -42,6 +44,8 @@ interface InvoiceFormProps {
 
 export default function InvoiceForm({ onSubmit }: InvoiceFormProps) {
   const [isFormVisible, setIsFormVisible] = useState(false);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+
  
 
 
@@ -51,16 +55,34 @@ const handleFormSubmit = async (data: InvoiceFormData, event: React.FormEvent<HT
   event.preventDefault(); // Previene il comportamento predefinito del form
 
   try {
-    // Funzione React per gestioni interne
-    onSubmit(data);
+    // Verifica se l'utente è autenticato
+    const user = auth.currentUser;
 
-    // Chiamata al backend
+    if (!user) {
+      console.error("Errore: l'utente non è autenticato.");
+      return;
+    }
+
+    // 🔥 Qui recuperi il token di autenticazione dell'utente
+    const token = await user.getIdToken();
+
+    // Aggiungi l'UID dell'utente ai dati della fattura
+    const invoiceDataWithUserId = {
+      ...data,
+      userId: user.uid, // Associa l'UID dell'utente alla fattura
+    };
+
+    // Funzione React per gestioni interne (tipo inviare dati al parent component se necessario)
+    onSubmit(invoiceDataWithUserId);
+
+    // Chiamata al backend con il token
     const response = await fetch("/invoices/NewInvoices", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}` // ✔️ Adesso `token` esiste correttamente
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(invoiceDataWithUserId),
     });
 
     if (response.ok) {
@@ -74,6 +96,7 @@ const handleFormSubmit = async (data: InvoiceFormData, event: React.FormEvent<HT
     console.error("Errore nella richiesta:", error);
   }
 };
+
   
   const {
     register,
@@ -102,6 +125,11 @@ const handleFormSubmit = async (data: InvoiceFormData, event: React.FormEvent<HT
   });
 
   const toggleFormVisibility = () => {
+    const user = auth.currentUser;
+  if (!user) {
+    setShowLoginPopup(true); // Mostra popup se non loggato
+    return;
+  }
     setIsFormVisible((prev) => !prev);
     if (isFormVisible) {
       reset(); // Resetta il form quando si chiude
@@ -112,12 +140,15 @@ const handleFormSubmit = async (data: InvoiceFormData, event: React.FormEvent<HT
 
   return (
     <div>
+      
       <button className="AddInvoices" onClick={toggleFormVisibility}>
         <IoAddOutline />
       </button>
 
       {isFormVisible && (
         <div className="popup-overlay">
+          
+
           <div className={`popup-content ${isFormVisible ? 'popup-open' : 'popup-closed'}`}>
             <button className="close-button" onClick={toggleFormVisibility}>
               Chiudi
@@ -237,7 +268,20 @@ const handleFormSubmit = async (data: InvoiceFormData, event: React.FormEvent<HT
             </div>
           </div>
         </div>
-      )}
+      )
+      }
+
+{showLoginPopup && (
+  <div className="popup-warm">
+    <div className="popup-contentWarm">
+      
+      <p>⚠️ Devi accedere per poter creare una fattura.</p>
+      <Link className="Log_foruse" to="/Login">clicca qui per accedere!</Link>
+      <button onClick={() => setShowLoginPopup(false)}>Chiudi</button>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

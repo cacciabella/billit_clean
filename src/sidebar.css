@@ -212,3 +212,42 @@
     padding: 0.6rem 0.75rem;
   }
 }
+
+
+.user-info {
+  margin-top: 20px;
+  cursor: pointer;
+}
+
+.user-email {
+  margin-left: -10px;
+  background-color: transparent;
+  color: white;
+  border-radius: 5px;
+  text-align: left;
+}
+
+.user-email:hover {
+  background-color: transparent;
+}
+
+.nav-options {
+  margin-top: 10px;
+  background-color: transparent;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.dropdown-options button {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 1px;
+  text-align: left;
+  width: 90%;
+}
+
+.dropdown-options button:hover {
+  background-color: transparent;
+}

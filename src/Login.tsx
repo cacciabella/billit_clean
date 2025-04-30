@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { auth } from '../firebase/firebaseConfig';
 import { signInWithEmailAndPassword } from "firebase/auth";
+
 import { Link, useNavigate } from 'react-router-dom';
 import { FiLock } from "react-icons/fi";
 import { FaRegUser } from "react-icons/fa6";
@@ -20,24 +21,39 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
+  
     try {
+      // Tentativo di login
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
       if (user.emailVerified) {
-        setMsg("Accesso effettuato con successo");
+        const token = await user.getIdToken();
+        const email = user.email ?? "default@example.com";  // Usa un fallback se email è null o undefined
+  
+        console.log("user id:", user.uid);
+        console.log("token:", token);
+        console.log("email:", email);
+  
+        // Salva il token nel localStorage
+        localStorage.setItem("token", token);
+        localStorage.setItem("email", email);
+  
+        // Naviga alla dashboard
         navigate('./dashboard');
       } else {
-        setMsg("Email non verificata. Controlla la casella di posta");
+        setMsg("Email non verificata. Controlla la casella di posta.");
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
-        setMsg(error.message);  // Imposta il messaggio di errore
+        setMsg(error.message);
       } else {
         setMsg("Si è verificato un errore imprevisto.");
       }
     }
   };
+  
+  
 
   return (
     <div className={`container ${isMobile ? 'mobile' : ''}`}>

@@ -70,15 +70,25 @@ const Dashboard: React.FC = () => {
 
   const fetchInvoices = async () => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('Token mancante');
+        setLoading(false); // Assicuriamoci che loading sia impostato a false anche in caso di token mancante
+        return;
+      }
+  
       const response = await fetch('/invoices/InvoiceList', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
-
+  
       if (response.ok) {
         console.log('Fattura recuperata con successo');
         const data: RawInvoice[] = await response.json();
         const transformedData = data.map((item: RawInvoice) => ({
-          Id: item.id || item.Id || Math.random(), // Ensure each invoice has an Id
+          Id: item.id || item.Id || Math.random(),
           nfattura: item.nfattura,
           cliente: item.cliente,
           indirizzoC: item.indirizzoC,
@@ -91,7 +101,7 @@ const Dashboard: React.FC = () => {
           indirizzoV: item.indirizzoV,
           quantità: item.quantità,
           pivaV: item.pivaV,
-          iva: item.iva
+          iva: item.iva,
         }));
         setInvoice(transformedData);
         setLoading(false);
@@ -299,6 +309,7 @@ const Dashboard: React.FC = () => {
         <button
           className="edit-btn"
           onClick={() => handleUpdate(row.original)}
+          disabled={invoice.length === 0}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M11 4H4C3.44772 4 3 4.44772 3 5V19C3 19.5523 3.44772 20 4 20H18C18.5523 20 19 19.5523 19 19V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -352,6 +363,7 @@ const Dashboard: React.FC = () => {
         <button
           className="delete-btn"
           onClick={() => handleDelete(row.original.Id!)}
+          disabled={invoice.length === 0}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -368,6 +380,7 @@ const Dashboard: React.FC = () => {
         <button
           className="download-btn"
           onClick={() => handleDownload(row.original)}
+          disabled={invoice.length === 0}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -406,14 +419,16 @@ const Dashboard: React.FC = () => {
     return <p className="status-message error">{error}</p>;
   }
 
+  // Sempre preparare dati per il grafico, anche quando l'array è vuoto
   const paidCount = invoice.filter(inv => inv.state === 'paid').length;
   const unpaidCount = invoice.filter(inv => inv.state === 'unpaid').length;
   const paidPercentage = invoice.length > 0 ? Math.round((paidCount / invoice.length) * 100) : 0;
   const unpaidPercentage = invoice.length > 0 ? Math.round((unpaidCount / invoice.length) * 100) : 0;
 
+  // Creare dati per il grafico anche quando non ci sono fatture
   const data = [
-    { name: "paid", value: paidCount },
-    { name: "unpaid", value: unpaidCount }
+    { name: 'Paid', value: paidCount || 0 },
+    { name: 'Unpaid', value: unpaidCount || 0 },
   ];
   
   const COLORS = ['#9367FD', '#F44336'];
@@ -424,6 +439,7 @@ const Dashboard: React.FC = () => {
         <h2>Stato Fatture</h2>
         <div className="chart-container">
           <PieChart width={250} height={250}>
+            {/* Nel caso non ci siano dati, mostriamo comunque il grafico vuoto */}
             <Pie
               data={data}
               cx="50%"
@@ -432,6 +448,8 @@ const Dashboard: React.FC = () => {
               outerRadius={80}
               paddingAngle={3}
               dataKey="value"
+              // Se non ci sono dati, possiamo aggiungere un padding più ampio
+              minAngle={invoice.length === 0 ? 0 : 5}
             >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -441,11 +459,11 @@ const Dashboard: React.FC = () => {
               layout="horizontal" 
               verticalAlign="bottom" 
               align="center"
-              formatter={(value) => (value === "paid" ? "Pagate" : "Non Pagate")}
+              formatter={(value) => (value === "Paid" ? "Pagate" : "Non Pagate")}
             />
             <Tooltip 
               formatter={(value, name) => {
-                return [`${value} fatture`, name === "paid" ? "Pagate" : "Non Pagate"];
+                return [`${value} fatture`, name === "Paid" ? "Pagate" : "Non Pagate"];
               }}
             />
           </PieChart>
@@ -459,6 +477,11 @@ const Dashboard: React.FC = () => {
               <span className="stat-label">Non Pagate: {unpaidPercentage}%</span>
             </div>
           </div>
+          {invoice.length === 0 && (
+            <div className="no-data-message">
+              Nessuna fattura presente
+            </div>
+          )}
         </div>
       </div>
 
@@ -479,7 +502,7 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="pagination">
             <span className="pagination-info">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
             </span>
             <div className="pagination-controls">
               <button
@@ -527,15 +550,23 @@ const Dashboard: React.FC = () => {
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="invoice-row">
-                {row.getVisibleCells().map((cell) => (
-                  <td  key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+            {table.getRowModel().rows.length > 0 ? (
+              table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className="invoice-row">
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length} className="no-data-cell">
+                  Nessuna fattura trovata
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
