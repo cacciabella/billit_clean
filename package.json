@@ -20,6 +20,7 @@
     "ag-grid-react": "^33.2.4",
     "bootstrap": "^5.3.5",
     "clsx": "^2.1.1",
+    "dotenv": "^16.5.0",
     "firebase": "^11.6.0",
     "framer-motion": "^12.6.2",
     "html2canvas": "^1.4.1",
