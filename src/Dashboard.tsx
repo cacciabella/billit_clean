@@ -479,7 +479,7 @@ const Dashboard: React.FC = () => {
               // Se non ci sono dati, possiamo aggiungere un padding più ampio
               minAngle={invoice.length === 0 ? 0 : 5}
             >
-              {data.map((_entry, index) => (
+              {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
