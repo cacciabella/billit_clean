@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { FiLock } from "react-icons/fi";
 import { FaRegUser } from "react-icons/fa6";
 import { Eye, EyeOff } from "lucide-react";
-
+import { toast } from 'react-hot-toast';
 
 export default function RegisterForm(){
 
@@ -14,6 +14,7 @@ export default function RegisterForm(){
     const [password,setPassword]= useState("")
     const [msg, setMsg] = useState("");
 const [showPassword, setShowPassword] = useState(false);
+
 
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -24,9 +25,21 @@ const [showPassword, setShowPassword] = useState(false);
           const user = userCredential.user;
 
 
-          await sendEmailVerification(user);
-          setMsg("Registrazione effettuata!,controlla a mail per confermare l'indirizzo");
+          await sendEmailVerification(user, {
+            url: 'http://localhost:5173/Login' // Specificando il protocollo
+          });
+          
+        
           // Reindirizza alla dashboard o cambia stato
+          toast.success('Registrazione effettuata!,controlla a mail per confermare l&indirizzo', {
+            duration: 1000,
+            icon: '✅',
+            style: {
+              fontSize: '18px',
+              padding: '20px',
+              minWidth: '300px',
+            },
+          });
          
 
         } catch (error: unknown) {

@@ -6,6 +6,7 @@ import SideBar from "./sidebar";
 import Login from "./Login";
 import Register from "./Register"; 
 import ForgetPwd from "./ForgetPwd";
+import {  Toaster } from 'react-hot-toast';
 
 
 
@@ -31,8 +32,11 @@ const shouldHideSidebar = hideSidebarRoutes.includes(location.pathname.toLowerCa
           <Route path="/register" element={<Register />} />
           <Route path="/forgetPwd" element={<ForgetPwd />} />
           <Route path="/login/dashboard" element={<Dashboard />} />
+          
+
 
         </Routes>
+        <Toaster position="top-center" reverseOrder={false} />
       </div>
     </div>
   );

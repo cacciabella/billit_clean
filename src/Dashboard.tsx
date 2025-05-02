@@ -12,6 +12,7 @@ import './Dashboard.css';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { toast } from 'react-hot-toast';
 
 declare module "jspdf" {
   interface jsPDF {
@@ -73,7 +74,7 @@ const Dashboard: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('Token mancante');
-        setLoading(false); // Assicuriamoci che loading sia impostato a false anche in caso di token mancante
+        setLoading(false);
         return;
       }
   
@@ -85,37 +86,55 @@ const Dashboard: React.FC = () => {
       });
   
       if (response.ok) {
-        console.log('Fattura recuperata con successo');
-        const data: RawInvoice[] = await response.json();
-        const transformedData = data.map((item: RawInvoice) => ({
-          Id: item.id || item.Id || Math.random(),
-          nfattura: item.nfattura,
-          cliente: item.cliente,
-          indirizzoC: item.indirizzoC,
-          pivaC: item.pivaC,
-          descrizione: item.descrizione,
-          prezzo: item.prezzo,
-          state: item.state,
-          dataf: item.dataf,
-          venditore: item.venditore,
-          indirizzoV: item.indirizzoV,
-          quantità: item.quantità,
-          pivaV: item.pivaV,
-          iva: item.iva,
-        }));
-        setInvoice(transformedData);
-        setLoading(false);
+        const text = await response.text();
+  
+        if (!text) {
+          console.warn("Risposta vuota dal server.");
+          setInvoice([]); // mostra tabella vuota
+          return;
+        }
+  
+        try {
+          const data: RawInvoice[] = JSON.parse(text);
+  
+          const transformedData = data.map((item: RawInvoice) => ({
+            Id: item.id || item.Id || Math.random(),
+            nfattura: item.nfattura,
+            cliente: item.cliente,
+            indirizzoC: item.indirizzoC,
+            pivaC: item.pivaC,
+            descrizione: item.descrizione,
+            prezzo: item.prezzo,
+            state: item.state,
+            dataf: item.dataf,
+            venditore: item.venditore,
+            indirizzoV: item.indirizzoV,
+            quantità: item.quantità,
+            pivaV: item.pivaV,
+            iva: item.iva,
+          }));
+  
+          setInvoice(transformedData); // anche se è un array vuoto, va bene
+        } catch (err) {
+          console.error("Errore nel parsing della risposta JSON:", err);
+          setInvoice([]); // fallback a tabella vuota
+          setError("Errore nel parsing dei dati");
+        }
       } else {
-        console.error('Errore nel recupero:', await response.text());
+        const errorText = await response.text();
+        console.error('Errore nel recupero:', errorText);
         setError('Errore nel recupero dei dati');
-        setLoading(false);
+        setInvoice([]); // fallback in caso di errore dal server
       }
     } catch (error) {
       console.error('Errore nella richiesta:', error);
       setError('Errore nella richiesta al server');
+      setInvoice([]); // fallback in caso di errore nella fetch
+    } finally {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     fetchInvoices();
@@ -290,7 +309,16 @@ const Dashboard: React.FC = () => {
         );
         setIsModalOpen(false);
         setSelectedInvoice(null);
-        alert('Invoice updated successfully');
+       
+        toast.success('Invoice updated successfully!', {
+          duration: 1000,
+          icon: '✅',
+          style: {
+            fontSize: '18px',
+            padding: '20px',
+            minWidth: '300px',
+          },
+        });
       } else {
         alert('Failed to update invoice');
       }

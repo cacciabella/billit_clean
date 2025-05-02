@@ -8,12 +8,17 @@ import { FaRegUser } from "react-icons/fa6";
 import { Eye, EyeOff } from "lucide-react";
 import './Login.css';
 import { useMediaQuery } from 'react-responsive';  // Importa react-responsive
+import { toast } from 'react-hot-toast';
+
+
+
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  
   const navigate = useNavigate();
 
   // Usa useMediaQuery per rilevare la larghezza dello schermo
@@ -38,9 +43,21 @@ export default function LoginForm() {
         // Salva il token nel localStorage
         localStorage.setItem("token", token);
         localStorage.setItem("email", email);
-  
+        toast.success('Accesso effettuato con successo!', {
+          duration: 1000,
+          icon: '✅',
+          style: {
+            fontSize: '18px',
+            padding: '20px',
+            minWidth: '300px',
+          },
+        });
+        
         // Naviga alla dashboard
-        navigate('./dashboard');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1600);
+        
       } else {
         setMsg("Email non verificata. Controlla la casella di posta.");
       }

@@ -12,6 +12,7 @@ body {
   justify-content: center;
 }
 
+
 .invoice-container {
   max-width: 800px;
   display: grid;
@@ -145,6 +146,23 @@ body {
   font-size: 14px;
 }
 
+
+.download-btnn{
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent; /* oppure un colore a tua scelta */
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.download-btnn svg {
+  width: 24px;
+  height: 24px;
+  color: gray;
+}
 .items-table td:not(:first-child) {
   text-align: right;
 }

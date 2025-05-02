@@ -8,6 +8,7 @@ import { FaRegUser } from "react-icons/fa6";
 
 
 import './Login.css'
+import toast from "react-hot-toast";
 
 
 export default function LoginForm(){
@@ -22,8 +23,18 @@ export default function LoginForm(){
         e.preventDefault();
         
         try {
-        await sendPasswordResetEmail(auth, email);
-            setMsg("Recupero Password effettuato con successo");
+        await sendPasswordResetEmail(auth, email, {
+          url: 'http://localhost:5173/Login' // Specificando il protocollo
+        });
+        toast.success('Controlla la mail per effetuare il recupero!', {
+          duration: 1000,
+          icon: '✅',
+          style: {
+            fontSize: '18px',
+            padding: '20px',
+            minWidth: '300px',
+          },
+        });
           // Reindirizza alla dashboard o cambia stato
         } catch (error: unknown) {
           if (error instanceof Error) {
