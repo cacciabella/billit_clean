@@ -36,3 +36,6 @@ build/
 .env
 
 frontend.env
+
+backend/https:/billitapikey.s3.us-east-1.amazonaws.com/billit-89312-firebase-adminsdk-fbsvc-0c1f9af542.json
+backend/https:/billitapikey.s3.us-east-1.amazonaws.com/billit-893
