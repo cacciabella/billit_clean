@@ -31,8 +31,8 @@ public class firebaseService {
             .filename(".env")
             .load();
 
-    private final String accessKeyId = dotenv.get("AWS_ACCESS_KEY");
-    private final String secretKey = dotenv.get("AWS_SECRET_KEY");
+    private final String accessKeyId = dotenv.get("AWS_ACCESS_KEY_ID");
+    private final String secretKey = dotenv.get("AWS_SECRET_ACCESS_KEY");
     private final String region = dotenv.get("AWS_REGION");
 
     // Metodo di inizializzazione
@@ -64,8 +64,8 @@ public class firebaseService {
     // Metodo per scaricare la configurazione di Firebase da S3 e inizializzare Firebase
     public void loadFirebaseConfig() throws IOException {
         String bucketName = "billitapikey";
-        String fileKey = "billit-89312-firebase-adminsdk-fbsvc-bec60e754b.json";
-        Path filePath = Paths.get("/Users/cacciabella12/invoices-generation/backend/firebase-config.json");
+        String fileKey = "billit-89312-firebase-adminsdk-fbsvc-0c1f9af542.json";
+        Path filePath = Paths.get("https://billitapikey.s3.us-east-1.amazonaws.com/billit-89312-firebase-adminsdk-fbsvc-0c1f9af542.json");
 
         // Crea la directory se non esiste
         Files.createDirectories(filePath.getParent());
