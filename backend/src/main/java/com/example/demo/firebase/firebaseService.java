@@ -7,18 +7,16 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import io.github.cdimascio.dotenv.Dotenv;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.io.InputStream;
+import java.net.URL;
 
 @Component
 public class firebaseService {
@@ -34,6 +32,7 @@ public class firebaseService {
     private final String accessKeyId = dotenv.get("AWS_ACCESS_KEY_ID");
     private final String secretKey = dotenv.get("AWS_SECRET_ACCESS_KEY");
     private final String region = dotenv.get("AWS_REGION");
+    private final String googleCloudCredentialsUrl = dotenv.get("GOOGLE_CLOUD_CREDENTIALS");
 
     // Metodo di inizializzazione
     @PostConstruct
@@ -61,47 +60,45 @@ public class firebaseService {
         }
     }
 
-    // Metodo per scaricare la configurazione di Firebase da S3 e inizializzare Firebase
+    // Metodo per scaricare la configurazione di Firebase da S3
     public void loadFirebaseConfig() throws IOException {
-        String bucketName = "billitapikey";
-        String fileKey = "billit-89312-firebase-adminsdk-fbsvc-0c1f9af542.json";
-        Path filePath = Paths.get("https://billitapikey.s3.us-east-1.amazonaws.com/billit-89312-firebase-adminsdk-fbsvc-0c1f9af542.json");
-
-        // Crea la directory se non esiste
-        Files.createDirectories(filePath.getParent());
-
-        // Scarica il file da S3, sovrascrivendo se esiste
-        try {
-            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(fileKey)
-                    .build();
-
-            s3Client.getObject(getObjectRequest, ResponseTransformer.toOutputStream(
-                    Files.newOutputStream(filePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            ));
-            System.out.println("File Firebase scaricato da S3: " + filePath.toAbsolutePath());
-        } catch (Exception e) {
-            System.err.println("Errore nel download del file da S3: " + e.getMessage());
-            throw new IOException("Impossibile scaricare il file di configurazione Firebase da S3", e);
+        if (googleCloudCredentialsUrl == null || googleCloudCredentialsUrl.isEmpty()) {
+            throw new IllegalStateException("URL per le credenziali Firebase non trovato nel file .env");
         }
 
-        // Inizializza Firebase
-        try (FileInputStream serviceAccount = new FileInputStream(filePath.toFile())) {
+        try {
+            // Parse the S3 URL to extract bucket and key
+            URL url = new URL(googleCloudCredentialsUrl);
+            String path = url.getPath();
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+            
+            String host = url.getHost();
+            String bucket = host.split("\\.")[0]; // Estrai il nome del bucket dalla prima parte dell'host
+            String key = path; // Il percorso è la chiave
+            
+            System.out.println("Caricamento del file Firebase da S3 - Bucket: " + bucket + ", Key: " + key);
+            
+            // Usa il client S3 per ottenere l'oggetto dal bucket
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+            
+            ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(getObjectRequest);
+            
+            // Inizializza Firebase con il contenuto del file
             FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .setCredentials(GoogleCredentials.fromStream(s3Object))
                     .build();
 
-            // Se Firebase non è già stato inizializzato, procedi con l'inizializzazione
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("Firebase inizializzato.");
-            } else {
-                System.out.println("Firebase già inizializzato.");
+                System.out.println("Firebase inizializzato con successo");
             }
-        } catch (IOException e) {
-            System.err.println("Errore nell'inizializzazione di Firebase con il file di servizio: " + e.getMessage());
-            throw new IOException("Impossibile inizializzare Firebase", e);
+        } catch (Exception e) {
+            throw new IOException("Errore nel caricamento delle credenziali Firebase da S3: " + e.getMessage(), e);
         }
     }
 }
