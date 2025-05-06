@@ -104,9 +104,10 @@ public class InvoiceController {
     
 
     @GetMapping("/ping")
-public ResponseEntity<String> ping() {
-    return ResponseEntity.ok("pong");
-}
+    public ResponseEntity<String> ping() {
+        System.out.println("[InvoiceController] Ping request received");
+        return ResponseEntity.ok("pong");
+    }
 // Helper method to check if Firebase is initialized
 private boolean isFirebaseInitialized() {
     try {
