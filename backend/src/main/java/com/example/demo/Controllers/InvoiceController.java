@@ -39,7 +39,10 @@ public class InvoiceController {
 
     public InvoiceController(RepositoryInvoices repositoryInvoices) {
         this.repositoryInvoices = repositoryInvoices;
-    } @GetMapping("/InvoiceList")
+    } 
+    
+    
+    @GetMapping("/InvoiceList")
     public ResponseEntity<?> getInvoicesByUser(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         System.out.println("[InvoiceController] START: Richiesta ricevuta per /invoices/InvoiceList con Authorization: " + (authorizationHeader != null ? authorizationHeader : "null"));
 
@@ -99,6 +102,11 @@ public class InvoiceController {
         }
     }
     
+
+    @GetMapping("/ping")
+public ResponseEntity<String> ping() {
+    return ResponseEntity.ok("pong");
+}
 // Helper method to check if Firebase is initialized
 private boolean isFirebaseInitialized() {
     try {

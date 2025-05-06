@@ -13,6 +13,6 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedOrigins("http://localhost:3000") // Consente tutte le origini
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Metodi HTTP permessi
                 .allowedHeaders("*") // Tutti gli header
-                .allowCredentials(false); // Disabilita credenziali per compatibilità con "*"
+                .allowCredentials(true); // Disabilita credenziali per compatibilità con "*"
     }
 }
