@@ -78,10 +78,12 @@ const Dashboard: React.FC = () => {
         return;
       }
   
+      
       const response = await fetch('https://billit-clean.onrender.com/invoices/InvoiceList', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+           'Cache-Control': 'no-cache, no-store'
         },
       });
   

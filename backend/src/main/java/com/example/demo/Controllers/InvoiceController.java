@@ -40,54 +40,38 @@ public class InvoiceController {
     public InvoiceController(RepositoryInvoices repositoryInvoices) {
         this.repositoryInvoices = repositoryInvoices;
     }
-
     @GetMapping("/InvoiceList")
-public ResponseEntity<?> getInvoicesByUser(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
-    try {
-        // Check if Firebase is initialized before trying to use it
-        if (!isFirebaseInitialized()) {
-            // Log dell'errore per debugging
-            System.err.println("Firebase non è inizializzato. Impossibile verificare il token.");
-            
-            // Invia un chiaro messaggio di errore con codice 503 e header Retry-After
-            return ResponseEntity
-                    .status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .header("Retry-After", "60") // Suggerisce al client di riprovare dopo 60 secondi
-                    .body("Servizio di autenticazione non disponibile. Riprova più tardi.");
+    public ResponseEntity<?> getInvoicesByUser(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        System.out.println("Richiesta ricevuta per /invoices/InvoiceList con Authorization: " + authorizationHeader);
+        try {
+            if (!isFirebaseInitialized()) {
+                System.err.println("Firebase non inizializzato");
+                return ResponseEntity
+                        .status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .header("Retry-After", "60")
+                        .body("Servizio di autenticazione non disponibile. Riprova più tardi.");
+            }
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                System.out.println("Token mancante o non valido");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token di autorizzazione mancante o non valido");
+            }
+            String token = authorizationHeader.substring(7);
+            System.out.println("Verifica token: " + token);
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
+            String userIdFromToken = decodedToken.getUid();
+            System.out.println("User ID: " + userIdFromToken);
+            List<invoices> userInvoices = repositoryInvoices.findByUserId(userIdFromToken);
+            System.out.println("Fatt nere recuperate: " + userInvoices.size());
+            return ResponseEntity.ok(userInvoices);
+        } catch (FirebaseAuthException e) {
+            System.err.println("Errore Firebase: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token non valido: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Errore generico: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore del server: " + e.getMessage());
         }
-
-        // Controlla se l'Authorization header è presente
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token di autorizzazione mancante o non valido");
-        }
-
-        // Estrai il token Firebase dalla richiesta
-        String token = authorizationHeader.substring(7); // Rimuove "Bearer "
-        FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-        String userIdFromToken = decodedToken.getUid(); // Estrai l'UID dell'utente
-
-        // Recupera le fatture per l'utente specifico
-        List<invoices> userInvoices = repositoryInvoices.findByUserId(userIdFromToken);
-
-        // Restituisci sempre un 200 OK, con un array vuoto se non ci sono fatture
-        return ResponseEntity.ok(userInvoices);
-
-    } catch (FirebaseAuthException e) {
-        // Gestione specifica per errori di autenticazione Firebase
-        System.err.println("Errore di autenticazione Firebase: " + e.getMessage());
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body("Token non valido: " + e.getMessage());
-    } catch (Exception e) {
-        // Log dettagliato dell'errore
-        System.err.println("Errore nel recupero delle fatture: " + e.getMessage());
-        e.printStackTrace();
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Errore del server: " + e.getMessage());
     }
-}
-
 // Helper method to check if Firebase is initialized
 private boolean isFirebaseInitialized() {
     try {
