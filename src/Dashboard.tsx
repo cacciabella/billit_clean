@@ -182,44 +182,63 @@ const Dashboard: React.FC = () => {
   // }, []);
 
   // First, create a test function
-const testServerConnection = async () => {
+// Aggiungi una nuova funzione di test per l'endpoint delle fatture semplificato
+const testInvoiceEndpoint = async () => {
   try {
     const token = localStorage.getItem('token');
-    if (!token) return false;
+    if (!token) {
+      console.error('Token mancante');
+      return false;
+    }
     
     const timestamp = Date.now();
-    const response = await fetch(`https://billit-clean.onrender.com/invoices/ping?v=${timestamp}`, {
+    const response = await fetch(`https://billit-clean.onrender.com/invoices/InvoiceListSimple?v=${timestamp}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Accept': 'application/json'
       }
     });
     
     if (response.ok) {
       const text = await response.text();
-      console.log("Server ping response:", text);
-      return true; // Connection works!
+      console.log("Test invocazione endpoint fatture:", text);
+      return true;
+    } else {
+      console.error(`Errore nel test endpoint fatture: ${response.status}`);
+      return false;
     }
-    return false;
   } catch (error) {
-    console.error("Server ping failed:", error);
+    console.error("Test endpoint fatture fallito:", error);
     return false;
   }
 };
 
-// Modify your useEffect to first test the connection
+// Modificare il tuo useEffect per testare entrambi gli endpoint
 useEffect(() => {
   let isMounted = true;
   
   const loadData = async () => {
     if (isMounted) {
-      const connectionOk = await testServerConnection();
-      if (connectionOk) {
-        // If connection works, try the real endpoint
-       await setInvoice;
+      const pingOk = await testServerConnection();
+      
+      if (pingOk!= null) {
+        console.log("Connessione al server OK");
+        // Se il ping funziona, testa l'endpoint delle fatture semplificato
+        const invoiceEndpointOk = await testInvoiceEndpoint();
+        
+        if (invoiceEndpointOk) {
+          console.log("Endpoint fatture semplificato OK, provo endpoint completo");
+          // Solo se entrambi funzionano, prova l'endpoint fatture completo
+          await setInvoice;
+        } else {
+          setError("Problema con l'endpoint delle fatture. Controlla il server.");
+          setLoading(false);
+        }
       } else {
-        setError("Non è possibile connettersi al server. Verifica la tua connessione.");
+        setError("Non è possibile connettersi al server.");
         setLoading(false);
       }
     }
@@ -805,3 +824,7 @@ useEffect(() => {
 };
 
 export default Dashboard;
+
+function testServerConnection() {
+  throw new Error('Function not implemented.');
+}
