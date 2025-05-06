@@ -103,29 +103,6 @@ public class InvoiceController {
     }
     
 
-    @GetMapping("/InvoiceListSimple")
-    public ResponseEntity<?> getInvoicesSimple(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
-        System.out.println("[InvoiceController] START: Richiesta ricevuta per /invoices/InvoiceListSimple");
-    
-        try {
-            // Verifica token come nell'altro endpoint
-            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token di autorizzazione mancante o non valido");
-            }
-    
-            String token = authorizationHeader.substring(7);
-            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-            String userIdFromToken = decodedToken.getUid();
-            
-            // Invece di fare una query completa, restituisci solo un messaggio di successo con l'userID
-            return ResponseEntity.ok("Autenticazione riuscita per l'utente: " + userIdFromToken);
-    
-        } catch (Exception e) {
-            System.err.println("[InvoiceController] ERROR: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore: " + e.getMessage());
-        }
-    }
 // Helper method to check if Firebase is initialized
 private boolean isFirebaseInitialized() {
     try {

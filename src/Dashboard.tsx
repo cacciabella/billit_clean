@@ -41,24 +41,24 @@ interface Invoice {
   state: "paid" | "unpaid";
 }
 
-// interface RawInvoice {
-//   id?: number;
-//   Id?: number;
-//   nfattura: string;
-//   dataf: string;
-//   venditore: string; 
-//   indirizzoV: string; 
-//   pivaV: string;
-//   cliente: string; 
-//   indirizzoC: string; 
-//   pivaC: string;
-//   descrizione: string;
-//   quantità: number; 
-//   prezzo: number;
-//   iva: number;
-//   note?: string;
-//   state: "paid" | "unpaid";
-// }
+interface RawInvoice {
+  id?: number;
+  Id?: number;
+  nfattura: string;
+  dataf: string;
+  venditore: string; 
+  indirizzoV: string; 
+  pivaV: string;
+  cliente: string; 
+  indirizzoC: string; 
+  pivaC: string;
+  descrizione: string;
+  quantità: number; 
+  prezzo: number;
+  iva: number;
+  note?: string;
+  state: "paid" | "unpaid";
+}
 
 const Dashboard: React.FC = () => {
   const [invoice, setInvoice] = useState<Invoice[]>([]);
@@ -68,188 +68,118 @@ const Dashboard: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [formData, setFormData] = useState<Partial<Invoice>>({});
   const [globalFilter, setGlobalFilter] = useState('');
-  // const fetchInvoices = async () => {
-  //   try {
-  //     const token = localStorage.getItem('token');
-  //     if (!token) {
-  //       console.error('Token mancante');
-  //       setLoading(false);
-  //       return;
-  //     }
-  
-  //     // Add timeout to prevent hanging requests
-  //     const controller = new AbortController();
-  //     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-      
-  //     const response = await fetch('https://billit-clean.onrender.com/invoices/ping?v=${Date.now()}', {
-  //       method: 'GET',
-  //       headers: {
-  //         'Authorization': `Bearer ${token}`,
-  //         'Cache-Control': 'no-cache, no-store, must-revalidate',
-  //         'Pragma': 'no-cache',
-  //   'Accept': 'application/json'
-  // },
-  // signal: controller.signal
-  //     });
-      
-  //     clearTimeout(timeoutId);
-  
-  //     if (response.ok) {
-  //       const text = await response.text();
-  
-  //       if (!text || text.trim() === '') {
-  //         console.warn("Risposta vuota dal server.");
-  //         setInvoice([]); // mostra tabella vuota
-  //         return;
-  //       }
-  
-  //       try {
-  //         const data: RawInvoice[] = JSON.parse(text);
-  
-  //         // Verifica che data sia un array prima di usare map
-  //         if (!Array.isArray(data)) {
-  //           console.error("La risposta non è un array:", data);
-  //           setInvoice([]);
-  //           setError("Formato dati non valido");
-  //           return;
-  //         }
-  
-  //         const transformedData = data.map((item: RawInvoice) => ({
-  //           Id: item.id || item.Id || Math.random(),
-  //           nfattura: item.nfattura,
-  //           cliente: item.cliente,
-  //           indirizzoC: item.indirizzoC,
-  //           pivaC: item.pivaC,
-  //           descrizione: item.descrizione,
-  //           prezzo: item.prezzo,
-  //           state: item.state,
-  //           dataf: item.dataf,
-  //           venditore: item.venditore,
-  //           indirizzoV: item.indirizzoV,
-  //           quantità: item.quantità,
-  //           pivaV: item.pivaV,
-  //           iva: item.iva,
-  //         }));
-  
-  //         setInvoice(transformedData);
-  //       } catch (err) {
-  //         console.error("Errore nel parsing della risposta JSON:", err, "Contenuto:", text);
-  //         setInvoice([]);
-  //         setError("Errore nel parsing dei dati");
-  //       }
-  //     } else {
-  //       // Gestisci specificamente l'errore 508
-  //       if (response.status === 508) {
-  //         console.error('Errore 508: Loop Detected nella richiesta API');
-  //         setError('Errore di loop rilevato dal server. Contatta l\'amministratore.');
-  //       } else {
-  //         const errorText = await response.text();
-  //         console.error(`Errore ${response.status} nel recupero:`, errorText);
-  //         setError(`Errore ${response.status}: ${response.statusText}`);
-  //       }
-  //       setInvoice([]);
-  //     }
-  //   } catch (error) {
-  //     // Controlla se è un errore di timeout
-  //     if (error instanceof DOMException && error.name === 'AbortError') {
-  //       console.error('Timeout nella richiesta al server');
-  //       setError('Timeout nella richiesta. Il server non risponde.');
-  //     } else {
-  //       console.error('Errore nella richiesta:', error);
-  //       setError('Errore nella connessione al server');
-  //     }
-  //     setInvoice([]);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-  
-  // useEffect(() => {
-  //   let isMounted = true;
-    
-  //   const loadData = async () => {
-  //     if (isMounted) {
-  //       await fetchInvoices();
-  //     }
-  //   };
-    
-  //   loadData();
-    
-  //   // Cleanup function to prevent state updates after unmount
-  //   return () => {
-  //     isMounted = false;
-  //   };
-  // }, []);
-
-  // First, create a test function
-// Aggiungi una nuova funzione di test per l'endpoint delle fatture semplificato
-const testInvoiceEndpoint = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('Token mancante');
-      return false;
-    }
-    
-    const timestamp = Date.now();
-    const response = await fetch(`https://billit-clean.onrender.com/invoices/InvoiceListSimple?v=${timestamp}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Accept': 'application/json'
+  const fetchInvoices = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('Token mancante');
+        setLoading(false);
+        return;
       }
-    });
-    
-    if (response.ok) {
-      const text = await response.text();
-      console.log("Test invocazione endpoint fatture:", text);
-      return true;
-    } else {
-      console.error(`Errore nel test endpoint fatture: ${response.status}`);
-      return false;
-    }
-  } catch (error) {
-    console.error("Test endpoint fatture fallito:", error);
-    return false;
-  }
-};
-
-// Modificare il tuo useEffect per testare entrambi gli endpoint
-useEffect(() => {
-  let isMounted = true;
   
-  const loadData = async () => {
-    if (isMounted) {
-      const pingOk = await testServerConnection();
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
-      if (pingOk!= null) {
-        console.log("Connessione al server OK");
-        // Se il ping funziona, testa l'endpoint delle fatture semplificato
-        const invoiceEndpointOk = await testInvoiceEndpoint();
-        
-        if (invoiceEndpointOk) {
-          console.log("Endpoint fatture semplificato OK, provo endpoint completo");
-          // Solo se entrambi funzionano, prova l'endpoint fatture completo
-          await setInvoice;
-        } else {
-          setError("Problema con l'endpoint delle fatture. Controlla il server.");
-          setLoading(false);
+      const response = await fetch('https://billit-clean.onrender.com/invoices/InvoiceList', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Accept': 'application/json'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+  
+      if (response.ok) {
+        const text = await response.text();
+  
+        if (!text || text.trim() === '') {
+          console.warn("Risposta vuota dal server.");
+          setInvoice([]); // mostra tabella vuota
+          return;
+        }
+  
+        try {
+          const data: RawInvoice[] = JSON.parse(text);
+  
+          // Verifica che data sia un array prima di usare map
+          if (!Array.isArray(data)) {
+            console.error("La risposta non è un array:", data);
+            setInvoice([]);
+            setError("Formato dati non valido");
+            return;
+          }
+  
+          const transformedData = data.map((item: RawInvoice) => ({
+            Id: item.id || item.Id || Math.random(),
+            nfattura: item.nfattura,
+            cliente: item.cliente,
+            indirizzoC: item.indirizzoC,
+            pivaC: item.pivaC,
+            descrizione: item.descrizione,
+            prezzo: item.prezzo,
+            state: item.state,
+            dataf: item.dataf,
+            venditore: item.venditore,
+            indirizzoV: item.indirizzoV,
+            quantità: item.quantità,
+            pivaV: item.pivaV,
+            iva: item.iva,
+          }));
+  
+          setInvoice(transformedData);
+        } catch (err) {
+          console.error("Errore nel parsing della risposta JSON:", err, "Contenuto:", text);
+          setInvoice([]);
+          setError("Errore nel parsing dei dati");
         }
       } else {
-        setError("Non è possibile connettersi al server.");
-        setLoading(false);
+        // Gestisci specificamente l'errore 508
+        if (response.status === 508) {
+          console.error('Errore 508: Loop Detected nella richiesta API');
+          setError('Errore di loop rilevato dal server. Contatta l\'amministratore.');
+        } else {
+          const errorText = await response.text();
+          console.error(`Errore ${response.status} nel recupero:`, errorText);
+          setError(`Errore ${response.status}: ${response.statusText}`);
+        }
+        setInvoice([]);
       }
+    } catch (error) {
+      // Controlla se è un errore di timeout
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.error('Timeout nella richiesta al server');
+        setError('Timeout nella richiesta. Il server non risponde.');
+      } else {
+        console.error('Errore nella richiesta:', error);
+        setError('Errore nella connessione al server');
+      }
+      setInvoice([]);
+    } finally {
+      setLoading(false);
     }
   };
   
-  loadData();
-  
-  return () => {
-    isMounted = false;
-  };
-}, []);
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadData = async () => {
+      if (isMounted) {
+        await fetchInvoices();
+      }
+    };
+    
+    loadData();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleUpdate = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -824,7 +754,3 @@ useEffect(() => {
 };
 
 export default Dashboard;
-
-function testServerConnection() {
-  throw new Error('Function not implemented.');
-}
