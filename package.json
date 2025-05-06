@@ -2,7 +2,12 @@
   "name": "invoices-generation",
   "private": true,
   "version": "0.0.0",
-  
+  "vite": {
+    "server": {
+      "proxy": {
+        "/api": "https://billit-clean.onrender.com" 
+      }
+    }},
 
   "type": "module",
  "scripts": {

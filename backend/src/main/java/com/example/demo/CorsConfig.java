@@ -10,7 +10,7 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:3000","https://billit-clean.onrender.com") // Consente tutte le origini
+                .allowedOrigins("http://localhost:3000") // Consente tutte le origini
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Metodi HTTP permessi
                 .allowedHeaders("*") // Tutti gli header
                 .allowCredentials(false); // Disabilita credenziali per compatibilità con "*"
