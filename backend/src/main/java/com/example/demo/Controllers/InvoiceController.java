@@ -41,27 +41,19 @@ public class InvoiceController {
         this.repositoryInvoices = repositoryInvoices;
     }
 
-    
-@GetMapping("/InvoiceList")
+    @GetMapping("/InvoiceList")
 public ResponseEntity<?> getInvoicesByUser(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
     try {
         // Check if Firebase is initialized before trying to use it
         if (!isFirebaseInitialized()) {
-            // Log the error for debugging
+            // Log dell'errore per debugging
             System.err.println("Firebase non è inizializzato. Impossibile verificare il token.");
             
-            // Option 1: Return an appropriate error message
+            // Invia un chiaro messaggio di errore con codice 503 e header Retry-After
             return ResponseEntity
                     .status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body("Servizio Firebase non disponibile. Riprova più tardi.");
-            
-            // Option 2 (for development only): Skip token verification and return all invoices
-            // Comment Option 1 and uncomment this section for development testing
-            /*
-            System.out.println("SVILUPPO: Accesso senza autenticazione concesso");
-            List<invoices> allInvoices = repositoryInvoices.findAll();
-            return ResponseEntity.ok(allInvoices);
-            */
+                    .header("Retry-After", "60") // Suggerisce al client di riprovare dopo 60 secondi
+                    .body("Servizio di autenticazione non disponibile. Riprova più tardi.");
         }
 
         // Controlla se l'Authorization header è presente
@@ -77,11 +69,8 @@ public ResponseEntity<?> getInvoicesByUser(@RequestHeader(value = "Authorization
         // Recupera le fatture per l'utente specifico
         List<invoices> userInvoices = repositoryInvoices.findByUserId(userIdFromToken);
 
-        if (userInvoices.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(userInvoices); // Se non ci sono fatture per l'utente
-        }
-
-        return ResponseEntity.ok(userInvoices); // Restituisce le fatture per l'utente
+        // Restituisci sempre un 200 OK, con un array vuoto se non ci sono fatture
+        return ResponseEntity.ok(userInvoices);
 
     } catch (FirebaseAuthException e) {
         // Gestione specifica per errori di autenticazione Firebase
