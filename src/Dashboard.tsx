@@ -81,7 +81,7 @@ const Dashboard: React.FC = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
-      const response = await fetch('/invoices/InvoiceList', {
+      const response = await fetch('https://billit-clean.onrender.com/invoices/InvoiceList', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
