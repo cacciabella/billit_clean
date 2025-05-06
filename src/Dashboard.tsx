@@ -68,7 +68,6 @@ const Dashboard: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [formData, setFormData] = useState<Partial<Invoice>>({});
   const [globalFilter, setGlobalFilter] = useState('');
-
   const fetchInvoices = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -78,19 +77,27 @@ const Dashboard: React.FC = () => {
         return;
       }
   
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
       const response = await fetch('https://billit-clean.onrender.com/invoices/InvoiceList', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
-           'Cache-Control': 'no-cache, no-store'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Accept': 'application/json'
         },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
   
       if (response.ok) {
         const text = await response.text();
   
-        if (!text) {
+        if (!text || text.trim() === '') {
           console.warn("Risposta vuota dal server.");
           setInvoice([]); // mostra tabella vuota
           return;
@@ -98,6 +105,14 @@ const Dashboard: React.FC = () => {
   
         try {
           const data: RawInvoice[] = JSON.parse(text);
+  
+          // Verifica che data sia un array prima di usare map
+          if (!Array.isArray(data)) {
+            console.error("La risposta non è un array:", data);
+            setInvoice([]);
+            setError("Formato dati non valido");
+            return;
+          }
   
           const transformedData = data.map((item: RawInvoice) => ({
             Id: item.id || item.Id || Math.random(),
@@ -116,30 +131,54 @@ const Dashboard: React.FC = () => {
             iva: item.iva,
           }));
   
-          setInvoice(transformedData); // anche se è un array vuoto, va bene
+          setInvoice(transformedData);
         } catch (err) {
-          console.error("Errore nel parsing della risposta JSON:", err);
-          setInvoice([]); // fallback a tabella vuota
+          console.error("Errore nel parsing della risposta JSON:", err, "Contenuto:", text);
+          setInvoice([]);
           setError("Errore nel parsing dei dati");
         }
       } else {
-        const errorText = await response.text();
-        console.error('Errore nel recupero:', errorText);
-        setError('Errore nel recupero dei dati');
-        setInvoice([]); // fallback in caso di errore dal server
+        // Gestisci specificamente l'errore 508
+        if (response.status === 508) {
+          console.error('Errore 508: Loop Detected nella richiesta API');
+          setError('Errore di loop rilevato dal server. Contatta l\'amministratore.');
+        } else {
+          const errorText = await response.text();
+          console.error(`Errore ${response.status} nel recupero:`, errorText);
+          setError(`Errore ${response.status}: ${response.statusText}`);
+        }
+        setInvoice([]);
       }
     } catch (error) {
-      console.error('Errore nella richiesta:', error);
-      setError('Errore nella richiesta al server');
-      setInvoice([]); // fallback in caso di errore nella fetch
+      // Controlla se è un errore di timeout
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.error('Timeout nella richiesta al server');
+        setError('Timeout nella richiesta. Il server non risponde.');
+      } else {
+        console.error('Errore nella richiesta:', error);
+        setError('Errore nella connessione al server');
+      }
+      setInvoice([]);
     } finally {
       setLoading(false);
     }
   };
   
-
   useEffect(() => {
-    fetchInvoices();
+    let isMounted = true;
+    
+    const loadData = async () => {
+      if (isMounted) {
+        await fetchInvoices();
+      }
+    };
+    
+    loadData();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleUpdate = (invoice: Invoice) => {
