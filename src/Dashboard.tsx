@@ -78,7 +78,7 @@ const Dashboard: React.FC = () => {
         return;
       }
   
-      const response = await fetch('/invoices/InvoiceList', {
+      const response = await fetch('https://billit-clean.onrender.com/invoices/InvoiceList', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -149,7 +149,7 @@ const Dashboard: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this invoice?')) return;
     try {
-      const response = await fetch(`/invoices/deleteInvoices/${id}`, {
+      const response = await fetch(`https://billit-clean.onrender.com/invoices/deleteInvoices/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -295,7 +295,7 @@ const Dashboard: React.FC = () => {
     if (!selectedInvoice?.Id) return;
 
     try {
-      const response = await fetch(`/invoices/UpdInvoices/${selectedInvoice.Id}`, {
+      const response = await fetch(`https://billit-clean.onrender.com/invoices/UpdInvoices/${selectedInvoice.Id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

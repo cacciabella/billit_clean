@@ -76,7 +76,7 @@ const handleFormSubmit = async (data: InvoiceFormData, event: React.FormEvent<HT
     onSubmit(invoiceDataWithUserId);
 
     // Chiamata al backend con il token
-    const response = await fetch("/invoices/NewInvoices", {
+    const response = await fetch("https://billit-clean.onrender.com/invoices/NewInvoices", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

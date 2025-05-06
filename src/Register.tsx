@@ -26,7 +26,7 @@ const [showPassword, setShowPassword] = useState(false);
 
 
           await sendEmailVerification(user, {
-            url: 'http://localhost:5173/Login' // Specificando il protocollo
+            url: 'https://billit-clean.onrender.com/Login' // Specificando il protocollo
           });
           
         
