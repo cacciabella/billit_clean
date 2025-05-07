@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -68,18 +68,40 @@ const Dashboard: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [formData, setFormData] = useState<Partial<Invoice>>({});
   const [globalFilter, setGlobalFilter] = useState('');
-  const fetchInvoices = async () => {
+  const [, setRetryCount] = useState(0);
+  const FETCH_TIMEOUT = 30000;
+  // Maximum number of retries
+  const MAX_RETRIES = 3;
+
+  const fetchInvoices = useCallback(async (retry = 0) => {
+    // All'inizio della funzione fetchInvoices
+const actualTimeout = retry === 0 ? FETCH_TIMEOUT * 2 : FETCH_TIMEOUT; // Timeout più lungo per il primo tentativo
+const controller = new AbortController();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const timeoutId = setTimeout(() => controller.abort(), actualTimeout);
     try {
+      // Show different loading messages based on retry attempts
+      setLoading(true);
+      setError(null);
+      
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('Token mancante');
         setLoading(false);
+        setError('Token di autenticazione mancante. Effettua nuovamente il login.');
         return;
       }
   
       // Add timeout to prevent hanging requests
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+      
+      // Show special message for retry attempts
+      if (retry > 0) {
+        toast.loading(`Tentativo ${retry}/${MAX_RETRIES} di connessione al server...`, {
+          id: 'fetch-retry-toast',
+        });
+      }
       
       const response = await fetch('https://billit-clean.onrender.com/invoices/InvoiceList', {
         method: 'GET',
@@ -93,6 +115,11 @@ const Dashboard: React.FC = () => {
       });
       
       clearTimeout(timeoutId);
+      
+      // Dismiss retry toast if it exists
+      if (retry > 0) {
+        toast.dismiss('fetch-retry-toast');
+      }
   
       if (response.ok) {
         const text = await response.text();
@@ -132,6 +159,16 @@ const Dashboard: React.FC = () => {
           }));
   
           setInvoice(transformedData);
+          
+          // Show success toast after retries
+          if (retry > 0) {
+            toast.success('Connessione al server ripristinata!', {
+              duration: 3000,
+            });
+          }
+          
+          // Reset retry count on success
+          setRetryCount(0);
         } catch (err) {
           console.error("Errore nel parsing della risposta JSON:", err, "Contenuto:", text);
           setInvoice([]);
@@ -149,20 +186,43 @@ const Dashboard: React.FC = () => {
         }
         setInvoice([]);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       // Controlla se è un errore di timeout
       if (error instanceof DOMException && error.name === 'AbortError') {
         console.error('Timeout nella richiesta al server');
-        setError('Timeout nella richiesta. Il server non risponde.');
+        
+        // Increment retry count
+        const newRetryCount = retry + 1;
+        setRetryCount(newRetryCount);
+        
+        if (newRetryCount <= MAX_RETRIES) {
+          // Attempt retry with exponential backoff
+          const backoffTime = Math.min(1000 * Math.pow(2, newRetryCount - 1), 10000);
+          
+          toast.loading(`Server non risponde. Nuovo tentativo tra ${backoffTime/1000} secondi...`, {
+            id: 'retry-toast',
+            duration: backoffTime,
+          });
+          
+          setTimeout(() => {
+            toast.dismiss('retry-toast');
+            fetchInvoices(newRetryCount);
+          }, backoffTime);
+          
+          setError(`Il server non risponde. Tentativo ${newRetryCount}/${MAX_RETRIES} in corso...`);
+          return;
+        } else {
+          setError('Il server non risponde dopo diversi tentativi. Riprova più tardi o contatta l\'assistenza.');
+        }
       } else {
         console.error('Errore nella richiesta:', error);
-        setError('Errore nella connessione al server');
+        setError('Errore nella connessione al server: ' + (error ? String(error) : 'Errore sconosciuto'));
       }
       setInvoice([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [FETCH_TIMEOUT, MAX_RETRIES]);
   
   useEffect(() => {
     let isMounted = true;
@@ -178,8 +238,11 @@ const Dashboard: React.FC = () => {
     // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted = false;
+      // Clear any pending toasts
+      toast.dismiss();
     };
-  }, []);
+  }, [fetchInvoices]);
+
 
   const handleUpdate = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
