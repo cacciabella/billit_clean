@@ -103,7 +103,7 @@ const timeoutId = setTimeout(() => controller.abort(), actualTimeout);
         });
       }
       
-      const response = await fetch('https://billit-clean.onrender.com/invoices/InvoiceList', {
+      const response = await fetch('https://billitclean-production.up.railway.app/invoices/InvoiceList', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -253,7 +253,7 @@ const timeoutId = setTimeout(() => controller.abort(), actualTimeout);
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this invoice?')) return;
     try {
-      const response = await fetch(`https://billit-clean.onrender.com/invoices/deleteInvoices/${id}`, {
+      const response = await fetch(`https://billitclean-production.up.railway.app/invoices/deleteInvoices/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -399,7 +399,7 @@ const timeoutId = setTimeout(() => controller.abort(), actualTimeout);
     if (!selectedInvoice?.Id) return;
 
     try {
-      const response = await fetch(`https://billit-clean.onrender.com/invoices/UpdInvoices/${selectedInvoice.Id}`, {
+      const response = await fetch(`https://billitclean-production.up.railway.app/invoices/UpdInvoices/${selectedInvoice.Id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

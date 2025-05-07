@@ -11,10 +11,10 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
-    allowedHosts: ['billit-clean.onrender.com'],
+    allowedHosts: ['billitclean-production.up.railway.app'],
     proxy: {
       '/invoices': {
-        target: 'https://billit-clean.onrender.com',
+        target: 'https://billitclean-production.up.railway.app',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/invoices/, '') // Rimuovi '/invoices' dall'URL
