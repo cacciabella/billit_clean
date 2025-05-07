@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, {  useEffect, useState } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -68,79 +68,41 @@ const Dashboard: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [formData, setFormData] = useState<Partial<Invoice>>({});
   const [globalFilter, setGlobalFilter] = useState('');
-  const [, setRetryCount] = useState(0);
-  const FETCH_TIMEOUT = 30000;
-  // Maximum number of retries
-  const MAX_RETRIES = 3;
 
-  const fetchInvoices = useCallback(async (retry = 0) => {
-    // All'inizio della funzione fetchInvoices
-const actualTimeout = retry === 0 ? FETCH_TIMEOUT * 2 : FETCH_TIMEOUT; // Timeout più lungo per il primo tentativo
-const controller = new AbortController();
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const timeoutId = setTimeout(() => controller.abort(), actualTimeout);
+  const fetchInvoices = async () => {
     try {
-      // Show different loading messages based on retry attempts
-      setLoading(true);
-      setError(null);
-      
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('Token mancante');
         setLoading(false);
-        setError('Token di autenticazione mancante. Effettua nuovamente il login.');
         return;
       }
-  
-      // Add timeout to prevent hanging requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
       
-      // Show special message for retry attempts
-      if (retry > 0) {
-        toast.loading(`Tentativo ${retry}/${MAX_RETRIES} di connessione al server...`, {
-          id: 'fetch-retry-toast',
-        });
-      }
-      
-      const response = await fetch('https://billitclean-production.up.railway.app/invoices/InvoiceList', {
+      const response = await fetch('/invoices/InvoiceList', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Accept': 'application/json'
+          'Cache-Control': 'no-cache, no-store',
+          'Accept': 'application/json' // Aggiunto header Accept
         },
-        signal: controller.signal
       });
       
-      clearTimeout(timeoutId);
-      
-      // Dismiss retry toast if it exists
-      if (retry > 0) {
-        toast.dismiss('fetch-retry-toast');
-      }
-  
       if (response.ok) {
         const text = await response.text();
-  
-        if (!text || text.trim() === '') {
+        
+        if (!text) {
           console.warn("Risposta vuota dal server.");
-          setInvoice([]); // mostra tabella vuota
+          setInvoice([]);
+          setLoading(false);
           return;
         }
-  
+        
+        // Log per debug - visualizza i primi caratteri della risposta
+        console.debug("Risposta ricevuta (primi 50 caratteri):", text.substring(0, 50));
+        
         try {
           const data: RawInvoice[] = JSON.parse(text);
-  
-          // Verifica che data sia un array prima di usare map
-          if (!Array.isArray(data)) {
-            console.error("La risposta non è un array:", data);
-            setInvoice([]);
-            setError("Formato dati non valido");
-            return;
-          }
-  
+          
           const transformedData = data.map((item: RawInvoice) => ({
             Id: item.id || item.Id || Math.random(),
             nfattura: item.nfattura,
@@ -157,93 +119,37 @@ const timeoutId = setTimeout(() => controller.abort(), actualTimeout);
             pivaV: item.pivaV,
             iva: item.iva,
           }));
-  
+          
           setInvoice(transformedData);
-          
-          // Show success toast after retries
-          if (retry > 0) {
-            toast.success('Connessione al server ripristinata!', {
-              duration: 3000,
-            });
-          }
-          
-          // Reset retry count on success
-          setRetryCount(0);
         } catch (err) {
-          console.error("Errore nel parsing della risposta JSON:", err, "Contenuto:", text);
+          console.error("Errore nel parsing della risposta JSON:", err);
+          console.error("Contenuto ricevuto (primi 100 caratteri):", text.substring(0, 100));
           setInvoice([]);
           setError("Errore nel parsing dei dati");
         }
       } else {
-        // Gestisci specificamente l'errore 508
-        if (response.status === 508) {
-          console.error('Errore 508: Loop Detected nella richiesta API');
-          setError('Errore di loop rilevato dal server. Contatta l\'amministratore.');
-        } else {
+        console.error(`Errore nella risposta: ${response.status} ${response.statusText}`);
+        try {
           const errorText = await response.text();
-          console.error(`Errore ${response.status} nel recupero:`, errorText);
-          setError(`Errore ${response.status}: ${response.statusText}`);
+          console.error('Contenuto errore:', errorText.substring(0, 200));
+        } catch (e) {
+          console.error('Impossibile leggere il contenuto dell\'errore',e);
         }
+        setError(`Errore nel recupero dei dati (${response.status})`);
         setInvoice([]);
       }
-    } catch (error: unknown) {
-      // Controlla se è un errore di timeout
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        console.error('Timeout nella richiesta al server');
-        
-        // Increment retry count
-        const newRetryCount = retry + 1;
-        setRetryCount(newRetryCount);
-        
-        if (newRetryCount <= MAX_RETRIES) {
-          // Attempt retry with exponential backoff
-          const backoffTime = Math.min(1000 * Math.pow(2, newRetryCount - 1), 10000);
-          
-          toast.loading(`Server non risponde. Nuovo tentativo tra ${backoffTime/1000} secondi...`, {
-            id: 'retry-toast',
-            duration: backoffTime,
-          });
-          
-          setTimeout(() => {
-            toast.dismiss('retry-toast');
-            fetchInvoices(newRetryCount);
-          }, backoffTime);
-          
-          setError(`Il server non risponde. Tentativo ${newRetryCount}/${MAX_RETRIES} in corso...`);
-          return;
-        } else {
-          setError('Il server non risponde dopo diversi tentativi. Riprova più tardi o contatta l\'assistenza.');
-        }
-      } else {
-        console.error('Errore nella richiesta:', error);
-        setError('Errore nella connessione al server: ' + (error ? String(error) : 'Errore sconosciuto'));
-      }
+    } catch (error) {
+      console.error('Errore nella richiesta:', error);
+      setError('Errore nella connessione al server');
       setInvoice([]);
     } finally {
       setLoading(false);
     }
-  }, [FETCH_TIMEOUT, MAX_RETRIES]);
+  };
   
   useEffect(() => {
-    let isMounted = true;
-    
-    const loadData = async () => {
-      if (isMounted) {
-        await fetchInvoices();
-      }
-    };
-    
-    loadData();
-    
-    // Cleanup function to prevent state updates after unmount
-    return () => {
-      isMounted = false;
-      // Clear any pending toasts
-      toast.dismiss();
-    };
-  }, [fetchInvoices]);
-
-
+    fetchInvoices();
+  }, []);
   const handleUpdate = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setFormData(invoice);
@@ -253,7 +159,7 @@ const timeoutId = setTimeout(() => controller.abort(), actualTimeout);
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this invoice?')) return;
     try {
-      const response = await fetch(`https://billitclean-production.up.railway.app/invoices/deleteInvoices/${id}`, {
+      const response = await fetch(`/invoices/deleteInvoices/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -399,7 +305,7 @@ const timeoutId = setTimeout(() => controller.abort(), actualTimeout);
     if (!selectedInvoice?.Id) return;
 
     try {
-      const response = await fetch(`https://billitclean-production.up.railway.app/invoices/UpdInvoices/${selectedInvoice.Id}`, {
+      const response = await fetch(`/invoices/UpdInvoices/${selectedInvoice.Id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
